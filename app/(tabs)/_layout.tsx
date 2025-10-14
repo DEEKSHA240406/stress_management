@@ -1,35 +1,105 @@
-import { Tabs } from 'expo-router';
 import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Platform, View, StyleSheet, Text } from 'react-native';
+import COLORS from '../../constants/colors';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import StudentDashboard from '../screens/student/StudentDashboard';
+import HistoryScreen from '../screens/student/HistoryScreen';
+import ResourcesScreen from '../screens/student/ResorcesScreen';
+import ProfileScreen from '../screens/student/ProfileScreen';
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+const Tab = createBottomTabNavigator();
 
+type TabIconProps = {
+  icon: string;
+  focused: boolean;
+};
+
+const TabIcon: React.FC<TabIconProps> = ({ icon, focused }) => (
+  <View style={[styles.iconContainer, focused && styles.iconContainerFocused]}>
+    <Text style={[styles.icon, focused && styles.iconFocused]}>{icon}</Text>
+  </View>
+);
+
+export default function TabNavigator() {
   return (
-    <Tabs
+    <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
+        tabBarActiveTintColor: COLORS.PRIMARY,
+        tabBarInactiveTintColor: COLORS.GRAY_400,
+        tabBarStyle: {
+          backgroundColor: COLORS.WHITE,
+          borderTopWidth: 1,
+          borderTopColor: COLORS.BORDER,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 5,
+          paddingTop: 5,
+          height: Platform.OS === 'ios' ? 85 : 60,
+          elevation: 8,
+          // Removed unsupported boxShadow properties for React Native
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          marginTop: -2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 5,
+        },
+      }}
+    >
+      <Tab.Screen
+        name="Dashboard"
+        component={StudentDashboard}
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="🏠" focused={focused} />,
+          tabBarLabel: 'Home',
         }}
       />
-      <Tabs.Screen
-        name="explore"
+      <Tab.Screen
+        name="History"
+        component={HistoryScreen}
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="📊" focused={focused} />,
+          tabBarLabel: 'History',
+          tabBarBadge: 3,
         }}
       />
-    </Tabs>
+      <Tab.Screen
+        name="Resources"
+        component={ResourcesScreen}
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon icon="📚" focused={focused} />,
+          tabBarLabel: 'Resources',
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarIcon: ({ focused }) => <TabIcon icon="👤" focused={focused} />,
+          tabBarLabel: 'Profile',
+        }}
+      />
+    </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  iconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+  },
+  iconContainerFocused: {
+    backgroundColor: COLORS.PRIMARY_BG,
+    borderRadius: 12,
+  },
+  icon: {
+    fontSize: 22,
+  },
+  iconFocused: {
+    fontSize: 24,
+  },
+});
