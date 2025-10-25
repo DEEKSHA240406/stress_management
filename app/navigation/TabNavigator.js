@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import StudentDashboard from '../screens/student/StudentDashboard';
 import HistoryScreen from '../screens/student/HistoryScreen';
 import ProfileScreen from '../screens/student/ProfileScreen';
-import ResourcesScreen from '../screens/student/ResorcesScreen';
+import ResourcesScreen from '../screens/student/ResourcesScreen';
 
 import colors from '../theme/colors';
 

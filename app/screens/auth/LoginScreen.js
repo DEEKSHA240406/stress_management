@@ -141,9 +141,7 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.subtitle}>
               Sign in to continue your mental wellness journey
             </Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>✨ Using Mock Data (No Backend Needed)</Text>
-            </View>
+          
           </View>
 
           {/* Form */}
@@ -248,13 +246,7 @@ const LoginScreen = ({ navigation }) => {
               </Text>
             </View>
 
-            {/* Available Accounts Info */}
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>📋 Available Test Accounts:</Text>
-              <Text style={styles.infoText}>• student@test.com / password123</Text>
-              <Text style={styles.infoText}>• admin@test.com / admin123</Text>
-              <Text style={styles.infoText}>• john@example.com / Test123</Text>
-            </View>
+           
 
             {/* Divider */}
             <View style={styles.divider}>
@@ -275,13 +267,6 @@ const LoginScreen = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              🚀 This app uses mock authentication{'\n'}
-              No backend server required!
-            </Text>
-          </View>
 
           {/* Extra spacing for keyboard */}
           <View style={styles.bottomSpacing} />

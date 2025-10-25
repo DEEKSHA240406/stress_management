@@ -189,7 +189,7 @@ const HistoryScreen = ({ navigation }) => {
             <Text style={styles.statNumber}>{assessments.length}</Text>
             <Text style={styles.statLabel}>Total Assessments</Text>
           </View>
-          <View style={styles.statCard}>
+          {/* <View style={styles.statCard}>
             <Text style={styles.statNumber}>
               {assessments.length > 0
                 ? Math.round(
@@ -199,7 +199,7 @@ const HistoryScreen = ({ navigation }) => {
                 : 0}
             </Text>
             <Text style={styles.statLabel}>Average Score</Text>
-          </View>
+          </View> */}
         </View>
       )}
 

@@ -59,7 +59,7 @@ const StudentDashboard = ({ navigation }) => {
   };
 
   const handleProfile = () => {
-    navigation.navigate('Profile');
+    Alert.alert('Profile', `Name: ${user?.name}\nEmail: ${user?.email}\nRole: ${user?.role}`);
   };
 
   const handleLogout = () => {
@@ -71,9 +71,25 @@ const StudentDashboard = ({ navigation }) => {
         {
           text: 'Logout',
           onPress: async () => {
-            await AsyncStorage.removeItem('@auth_token');
-            await AsyncStorage.removeItem('@user_data');
-            dispatch(logout());
+            try {
+              console.log('🔓 Starting logout process...');
+              
+              // Clear AsyncStorage
+              await AsyncStorage.removeItem('@auth_token');
+              await AsyncStorage.removeItem('@user_data');
+              console.log('✅ AsyncStorage cleared');
+              
+              // Dispatch logout action
+              dispatch(logout());
+              console.log('✅ Redux logout dispatched');
+              
+              // Show success message
+              Alert.alert('Success', 'Logged out successfully!');
+              
+            } catch (error) {
+              console.error('❌ Logout error:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
           },
           style: 'destructive',
         },
@@ -98,6 +114,7 @@ const StudentDashboard = ({ navigation }) => {
         }
         showsVerticalScrollIndicator={true}
       >
+        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>{getGreeting()}! 👋</Text>
@@ -108,6 +125,9 @@ const StudentDashboard = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+      
+
+        {/* Welcome Card */}
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeTitle}>Welcome to Your Mental Wellness Hub 🌟</Text>
           <Text style={styles.welcomeText}>
@@ -115,21 +135,23 @@ const StudentDashboard = ({ navigation }) => {
           </Text>
         </View>
 
+        {/* Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{totalAssessments}</Text>
             <Text style={styles.statLabel}>Assessments</Text>
             <Text style={styles.statIcon}>📊</Text>
           </View>
-          <View style={styles.statCard}>
+          {/* <View style={styles.statCard}>
             <Text style={styles.statNumber}>
               {lastAssessment ? lastAssessment.score || 'N/A' : '0'}
             </Text>
             <Text style={styles.statLabel}>Last Score</Text>
             <Text style={styles.statIcon}>⭐</Text>
-          </View>
+          </View> */}
         </View>
 
+        {/* Start Assessment Button */}
         <TouchableOpacity
           style={styles.startButton}
           onPress={handleStartAssessment}
@@ -145,6 +167,7 @@ const StudentDashboard = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
+        {/* Quick Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           
@@ -175,6 +198,7 @@ const StudentDashboard = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
+        {/* Daily Tip */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Daily Tip 💡</Text>
           <View style={styles.tipCard}>
@@ -184,7 +208,8 @@ const StudentDashboard = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.emergencyCard}>
+        {/* Emergency Card */}
+        {/* <View style={styles.emergencyCard}>
           <Text style={styles.emergencyIcon}>🆘</Text>
           <Text style={styles.emergencyTitle}>Need Immediate Help?</Text>
           <Text style={styles.emergencyText}>
@@ -193,10 +218,11 @@ const StudentDashboard = ({ navigation }) => {
           <TouchableOpacity style={styles.emergencyButton}>
             <Text style={styles.emergencyButtonText}>Contact Support</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
+        {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
+          <Text style={styles.logoutButtonText}>🚪 Logout</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomSpacing} />
@@ -240,9 +266,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileIcon: {
     fontSize: 24,
+  },
+  mockBadge: {
+    backgroundColor: '#DBEAFE',
+    marginHorizontal: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  mockBadgeText: {
+    fontSize: 12,
+    color: '#1E40AF',
+    fontWeight: '600',
   },
   welcomeCard: {
     backgroundColor: '#EEF2FF',
@@ -274,6 +319,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     marginHorizontal: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statNumber: {
     fontSize: 32,
@@ -295,6 +345,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 32,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   startButtonContent: {
     flexDirection: 'row',
@@ -332,6 +387,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   actionIconContainer: {
     width: 48,
@@ -417,13 +477,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     padding: 16,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#FEE2E2',
+    borderWidth: 2,
+    borderColor: '#EF4444',
     alignItems: 'center',
   },
   logoutButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
     color: '#EF4444',
   },
   bottomSpacing: {

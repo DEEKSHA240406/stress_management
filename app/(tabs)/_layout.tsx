@@ -5,7 +5,7 @@ import COLORS from '../../constants/colors';
 
 import StudentDashboard from '../screens/student/StudentDashboard';
 import HistoryScreen from '../screens/student/HistoryScreen';
-import ResourcesScreen from '../screens/student/ResorcesScreen';
+import ResourcesScreen from '../screens/student/ResourcesScreen';
 import ProfileScreen from '../screens/student/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
