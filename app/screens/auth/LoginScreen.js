@@ -74,23 +74,33 @@ const LoginScreen = ({ navigation }) => {
         console.log('✅ Login successful, user stored');
 
         // Show success message
-        Alert.alert(
-          'Welcome Back! 👋',
-          `Hello ${response.user.name}!`,
-          [
-            {
-              text: 'Continue',
-              onPress: () => {
-                // Navigate based on role
-                if (response.user.role === 'admin') {
-                  navigation.replace('AdminDashboard');
-                } else {
-                  navigation.replace('StudentDashboard');
-                }
-              }
-            }
-          ]
-        );
+        // Alert.alert(
+        //   'Welcome Back! 👋',
+        //   `Hello ${response.user.name}!`,
+        //   [
+        //     {
+        //       text: 'Continue',
+        //       onPress: () => {
+        //         // Navigate based on role
+        //         switch (response.user.role) {
+        //           case 'admin':
+        //             navigation.replace('AdminDashboard');
+        //             break;
+        //           case 'mentor':
+        //             navigation.replace('MentorDashboard');
+        //             break;
+        //           case 'counselor':
+        //             navigation.replace('CounselorDashboard');
+        //             break;
+        //           case 'student':
+        //           default:
+        //             navigation.replace('StudentDashboard');
+        //             break;
+        //         }
+        //       }
+        //     }
+        //   ]
+        // );
       } else {
         // Handle login failure
         console.error('❌ Login failed:', response.message);
@@ -111,14 +121,27 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
-  // Quick fill for testing
+  // Quick fill for testing - NOW WITH ALL 4 ROLES
   const fillTestCredentials = (userType) => {
-    if (userType === 'student') {
-      setEmail('student@test.com');
-      setPassword('password123');
-    } else if (userType === 'admin') {
-      setEmail('admin@test.com');
-      setPassword('admin123');
+    switch (userType) {
+      case 'student':
+        setEmail('student@test.com');
+        setPassword('password123');
+        break;
+      case 'mentor':
+        setEmail('mentor@test.com');
+        setPassword('mentor123');
+        break;
+      case 'counselor':
+        setEmail('counselor@test.com');
+        setPassword('counselor123');
+        break;
+      case 'admin':
+        setEmail('admin@test.com');
+        setPassword('admin123');
+        break;
+      default:
+        break;
     }
   };
 
@@ -141,9 +164,6 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.subtitle}>
               Sign in to continue your mental wellness journey
             </Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>✨ Using Mock Data (No Backend Needed)</Text>
-            </View>
           </View>
 
           {/* Form */}
@@ -222,38 +242,59 @@ const LoginScreen = ({ navigation }) => {
               )}
             </TouchableOpacity>
 
-            {/* Test Credentials */}
+            {/* Test Credentials - ALL 4 ROLES */}
             <View style={styles.testCredentialsBox}>
               <Text style={styles.testTitle}>🧪 Quick Test Login:</Text>
+              
+              {/* First Row: Student & Mentor */}
               <View style={styles.testButtonsRow}>
                 <TouchableOpacity
-                  style={styles.testButton}
+                  style={[styles.testButton, styles.studentButton]}
                   onPress={() => fillTestCredentials('student')}
                   disabled={loading}
                 >
-                  <Text style={styles.testButtonText}>👨‍🎓 Student</Text>
+                  <Text style={styles.testButtonIcon}>👨‍🎓</Text>
+                  <Text style={styles.testButtonText}>Student</Text>
                   <Text style={styles.testButtonSubtext}>password123</Text>
                 </TouchableOpacity>
+                
                 <TouchableOpacity
-                  style={styles.testButton}
+                  style={[styles.testButton, styles.mentorButton]}
+                  onPress={() => fillTestCredentials('mentor')}
+                  disabled={loading}
+                >
+                  <Text style={styles.testButtonIcon}>👨‍🏫</Text>
+                  <Text style={styles.testButtonText}>Mentor</Text>
+                  <Text style={styles.testButtonSubtext}>mentor123</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Second Row: Counselor & Admin */}
+              <View style={styles.testButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.testButton, styles.counselorButton]}
+                  onPress={() => fillTestCredentials('counselor')}
+                  disabled={loading}
+                >
+                  <Text style={styles.testButtonIcon}>👨‍⚕️</Text>
+                  <Text style={styles.testButtonText}>Counselor</Text>
+                  <Text style={styles.testButtonSubtext}>counselor123</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.testButton, styles.adminButton]}
                   onPress={() => fillTestCredentials('admin')}
                   disabled={loading}
                 >
-                  <Text style={styles.testButtonText}>👨‍💼 Admin</Text>
+                  <Text style={styles.testButtonIcon}>👨‍💼</Text>
+                  <Text style={styles.testButtonText}>Admin</Text>
                   <Text style={styles.testButtonSubtext}>admin123</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.testHint}>
-                Tap to auto-fill test credentials
-              </Text>
-            </View>
 
-            {/* Available Accounts Info */}
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>📋 Available Test Accounts:</Text>
-              <Text style={styles.infoText}>• student@test.com / password123</Text>
-              <Text style={styles.infoText}>• admin@test.com / admin123</Text>
-              <Text style={styles.infoText}>• john@example.com / Test123</Text>
+              <Text style={styles.testHint}>
+                Tap any button to auto-fill test credentials
+              </Text>
             </View>
 
             {/* Divider */}
@@ -273,14 +314,6 @@ const LoginScreen = ({ navigation }) => {
                 <Text style={styles.registerLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              🚀 This app uses mock authentication{'\n'}
-              No backend server required!
-            </Text>
           </View>
 
           {/* Extra spacing for keyboard */}
@@ -324,18 +357,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
     marginBottom: 12,
-  },
-  badge: {
-    backgroundColor: '#DBEAFE',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 8,
-  },
-  badgeText: {
-    fontSize: 12,
-    color: '#1E40AF',
-    fontWeight: '600',
   },
   form: {
     width: '100%',
@@ -423,6 +444,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#15803D',
     marginBottom: 12,
+    textAlign: 'center',
   },
   testButtonsRow: {
     flexDirection: 'row',
@@ -432,45 +454,50 @@ const styles = StyleSheet.create({
   testButton: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#86EFAC',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 2,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  testButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#15803D',
+  studentButton: {
+    borderColor: '#6366F1',
+    backgroundColor: '#EEF2FF',
+  },
+  mentorButton: {
+    borderColor: '#FF6B9D',
+    backgroundColor: '#FFF0F5',
+  },
+  counselorButton: {
+    borderColor: '#4ECDC4',
+    backgroundColor: '#E8FFFE',
+  },
+  adminButton: {
+    borderColor: '#FFA726',
+    backgroundColor: '#FFF8E1',
+  },
+  testButtonIcon: {
+    fontSize: 24,
     marginBottom: 4,
   },
+  testButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
   testButtonSubtext: {
-    fontSize: 10,
-    color: '#16A34A',
+    fontSize: 9,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   testHint: {
     fontSize: 11,
     color: '#16A34A',
     fontStyle: 'italic',
     textAlign: 'center',
-  },
-  infoBox: {
-    backgroundColor: '#EEF2FF',
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  infoTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4F46E5',
-    marginBottom: 8,
-  },
-  infoText: {
-    fontSize: 11,
-    color: '#6366F1',
-    marginBottom: 4,
+    marginTop: 4,
   },
   divider: {
     flexDirection: 'row',
@@ -500,16 +527,6 @@ const styles = StyleSheet.create({
     color: '#6366F1',
     fontSize: 14,
     fontWeight: '700',
-  },
-  footer: {
-    marginTop: 32,
-    paddingHorizontal: 20,
-  },
-  footerText: {
-    textAlign: 'center',
-    color: '#9CA3AF',
-    fontSize: 12,
-    lineHeight: 18,
   },
   bottomSpacing: {
     height: 100,

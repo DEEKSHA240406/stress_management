@@ -12,10 +12,8 @@ function App() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Simple initialization - no fonts required
     const prepare = async () => {
       try {
-        // Add any async initialization here
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (e) {
         console.warn(e);
@@ -27,7 +25,6 @@ function App() {
     prepare();
   }, []);
 
-  // Show loading indicator while initializing
   if (!isReady) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' }}>
@@ -52,7 +49,6 @@ function App() {
   );
 }
 
-// CRITICAL: Register the app component with Expo
 registerRootComponent(App);
 
 export default App;

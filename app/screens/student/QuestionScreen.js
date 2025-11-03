@@ -7,94 +7,98 @@ import {
   Animated,
   Dimensions,
   Alert,
+  Platform,
 } from 'react-native';
-import { QUESTION_CATEGORIES, ENCOURAGEMENT_MESSAGES } from '../../../constants';
+import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  QUESTION_CATEGORIES,
+  GENDER_TYPES,
+  AGE_GROUPS,
+  CATEGORY_COLORS,
+  CATEGORY_NAMES,
+  CATEGORY_ICONS,
+  QUESTION_SOUNDS,
+  getQuestionsByCategory,
+  getAllQuestions,
+  hasSensitiveContent,
+  getGentlePhrasing,
+  detectAgeGroup,
+  playQuestionSound,
+} from '../../../constants/questionCategories';
 
 const { width, height } = Dimensions.get('window');
 
-// Sample questions for each category
-const QUESTIONS = {
-  [QUESTION_CATEGORIES.JOLLY]: [
-    {
-      id: 1,
-      text: "What's your favorite color?",
-      options: ['Red 🔴', 'Blue 🔵', 'Green 🟢', 'Yellow 🟡'],
-    },
-    {
-      id: 2,
-      text: 'What makes you smile the most?',
-      options: ['Friends 👥', 'Music 🎵', 'Food 🍕', 'Nature 🌳'],
-    },
-    {
-      id: 3,
-      text: 'How do you like to spend your free time?',
-      options: ['Reading 📚', 'Sports ⚽', 'Gaming 🎮', 'Sleeping 😴'],
-    },
-  ],
-  [QUESTION_CATEGORIES.HEALTH]: [
-    {
-      id: 4,
-      text: 'How many hours do you sleep on average?',
-      options: ['Less than 5 hours', '5-6 hours', '7-8 hours', 'More than 8 hours'],
-    },
-    {
-      id: 5,
-      text: 'How often do you exercise?',
-      options: ['Never', 'Rarely', 'Sometimes', 'Regularly'],
-    },
-    {
-      id: 6,
-      text: 'How would you rate your diet?',
-      options: ['Poor', 'Fair', 'Good', 'Excellent'],
-    },
-  ],
-  [QUESTION_CATEGORIES.MENTAL_HEALTH]: [
-    {
-      id: 7,
-      text: 'How often do you feel stressed?',
-      options: ['Rarely', 'Sometimes', 'Often', 'Always'],
-    },
-    {
-      id: 8,
-      text: 'Do you feel overwhelmed by your responsibilities?',
-      options: ['Not at all', 'Slightly', 'Moderately', 'Very much'],
-    },
-    {
-      id: 9,
-      text: 'How would you describe your mood lately?',
-      options: ['Great 😊', 'Good 🙂', 'Okay 😐', 'Not good 😟'],
-    },
-    {
-      id: 10,
-      text: 'Do you have someone to talk to when you need support?',
-      options: ['Always', 'Usually', 'Sometimes', 'Never'],
-    },
-  ],
-};
+// Encouragement messages
+const ENCOURAGEMENT_MESSAGES = [
+  'Great job! 🌟',
+  'You\'re doing amazing! 💪',
+  'Keep going! ✨',
+  'Well done! 👏',
+  'Fantastic! 🎉',
+  'You\'re awesome! 🌈',
+  'Excellent choice! 💯',
+  'You\'re crushing it! 🚀',
+  'Brilliant! 🌟',
+  'Superb! ⭐',
+];
 
-const QuestionScreen = ({ navigation }) => {
-  const [currentCategory, setCurrentCategory] = useState(QUESTION_CATEGORIES.JOLLY);
+// Different emojis for variety
+const CELEBRATION_EMOJIS = [
+  '🎉', '🌟', '✨', '💫', '⭐', '🎊', '🎈', '🎁', 
+  '💝', '🌈', '🦋', '🌺', '🌸', '🌼', '🌻', '🏆',
+  '👏', '💪', '🔥', '💯', '✅', '👍', '🙌', '💖',
+  '🎯', '🚀', '💎', '🌙', '☀️', '🎵', '🎶', '💐'
+];
+
+// Sound files array
+const SOUND_FILES = [
+  // require('../../../assets/sounds/celebration.mp3'),
+  // require('../../../assets/sounds/correct.mp3'),
+  // require('../../../assets/sounds/encouragement.mp3'),
+  require('../../../assets/sounds/thumbs-up.mp3'),
+  require('../../../assets/sounds/start.mp3'),
+];
+
+const QuestionScreen = ({ navigation, route }) => {
+  // Get user profile from navigation params or previous screen
+  const userProfile = route?.params?.userProfile || {
+    gender: GENDER_TYPES.PREFER_NOT_TO_SAY,
+    age: 25,
+  };
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [particles, setParticles] = useState([]);
+  const [sound, setSound] = useState(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const emojiScale = useRef(new Animated.Value(0)).current;
-  const emojiOpacity = useRef(new Animated.Value(0)).current;
 
-  // Get all questions in order
-  const allQuestions = [
-    ...QUESTIONS[QUESTION_CATEGORIES.JOLLY],
-    ...QUESTIONS[QUESTION_CATEGORIES.HEALTH],
-    ...QUESTIONS[QUESTION_CATEGORIES.MENTAL_HEALTH],
-  ];
+  // Detect age group
+  const ageGroup = detectAgeGroup(userProfile.age);
+
+  // Get filtered questions based on user profile
+  const allQuestions = getAllQuestions({
+    gender: userProfile.gender,
+    ageGroup: ageGroup,
+  });
 
   const currentQuestion = allQuestions[currentQuestionIndex];
   const totalQuestions = allQuestions.length;
   const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+
+  // Clean up sound on unmount
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
 
   useEffect(() => {
     // Animate question entrance
@@ -112,42 +116,181 @@ const QuestionScreen = ({ navigation }) => {
     ]).start();
   }, [currentQuestionIndex]);
 
+  const playSound = async (questionIndex) => {
+    try {
+      // Unload previous sound if exists
+      if (sound) {
+        await sound.unloadAsync();
+      }
+
+      // Configure audio mode
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
+      // Rotate through different sounds based on question index
+      const soundFile = SOUND_FILES[questionIndex % SOUND_FILES.length];
+
+      const { sound: newSound } = await Audio.Sound.createAsync(soundFile);
+      setSound(newSound);
+      await newSound.playAsync();
+      
+      console.log(`🔊 Playing sound ${questionIndex % SOUND_FILES.length + 1} for question ${questionIndex + 1}`);
+    } catch (error) {
+      console.log('Sound playback error:', error);
+    }
+  };
+
+  const getRandomEmoji = () => {
+    return CELEBRATION_EMOJIS[Math.floor(Math.random() * CELEBRATION_EMOJIS.length)];
+  };
+
+  const createParticles = () => {
+    const particleCount = 25; // More particles for fuller effect
+    const newParticles = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      // Random angle for each particle
+      const angle = (Math.random() * 360 * Math.PI) / 180;
+      
+      // Random distance (some go further than others)
+      const distance = 100 + Math.random() * 200;
+      
+      // Random velocity for natural feel
+      const velocity = 0.5 + Math.random() * 0.5;
+      
+      // Random rotation
+      const rotation = Math.random() * 720 - 360;
+      
+      // Random size variation
+      const scale = 0.6 + Math.random() * 0.8;
+
+      newParticles.push({
+        id: i,
+        emoji: getRandomEmoji(),
+        translateX: new Animated.Value(0),
+        translateY: new Animated.Value(0),
+        opacity: new Animated.Value(1),
+        scale: new Animated.Value(0),
+        rotate: new Animated.Value(0),
+        angle,
+        distance: distance * velocity,
+        rotation,
+        finalScale: scale,
+      });
+    }
+
+    setParticles(newParticles);
+    return newParticles;
+  };
+
+  const triggerGPayBurst = () => {
+    const newParticles = createParticles();
+
+    // Animate all particles
+    newParticles.forEach((particle, index) => {
+      // Stagger the animations slightly for more natural effect
+      const delay = index * 15;
+
+      Animated.parallel([
+        // Scale up quickly
+        Animated.spring(particle.scale, {
+          toValue: particle.finalScale,
+          friction: 3,
+          tension: 80,
+          delay,
+          useNativeDriver: true,
+        }),
+        // Move outward in all directions
+        Animated.timing(particle.translateX, {
+          toValue: Math.cos(particle.angle) * particle.distance,
+          duration: 1200,
+          delay,
+          useNativeDriver: true,
+        }),
+        Animated.timing(particle.translateY, {
+          toValue: Math.sin(particle.angle) * particle.distance - 50, // Slight upward bias
+          duration: 1200,
+          delay,
+          useNativeDriver: true,
+        }),
+        // Rotate while moving
+        Animated.timing(particle.rotate, {
+          toValue: particle.rotation,
+          duration: 1200,
+          delay,
+          useNativeDriver: true,
+        }),
+        // Fade out as they move
+        Animated.sequence([
+          Animated.delay(delay + 400),
+          Animated.timing(particle.opacity, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    });
+  };
+
   const handleAnswer = (option, index) => {
+    // Play different sound for each question
+    playSound(currentQuestionIndex);
+
     // Save answer
     const newAnswer = {
       questionId: currentQuestion.id,
+      category: currentQuestion.category,
       question: currentQuestion.text,
       answer: option,
+      sensitivity: currentQuestion.sensitivity,
+      timestamp: new Date().toISOString(),
     };
     setAnswers([...answers, newAnswer]);
 
     // Trigger celebration animation
     setShowCelebration(true);
-    Animated.parallel([
-      Animated.spring(emojiScale, {
-        toValue: 1,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(emojiOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    triggerGPayBurst();
 
     // Wait for animation then move to next question
     setTimeout(() => {
       moveToNextQuestion();
-    }, 1500);
+    }, 1600);
+  };
+
+  const saveAssessmentToHistory = async () => {
+    try {
+      const assessment = {
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        answers: answers,
+        totalQuestions: totalQuestions,
+        userProfile: userProfile,
+        completedAt: new Date().toISOString(),
+      };
+
+      // Get existing history
+      const historyJson = await AsyncStorage.getItem('@assessment_history');
+      const history = historyJson ? JSON.parse(historyJson) : [];
+      
+      // Add new assessment
+      history.push(assessment);
+      
+      // Save back to storage
+      await AsyncStorage.setItem('@assessment_history', JSON.stringify(history));
+      
+      console.log('✅ Assessment saved to history');
+    } catch (error) {
+      console.error('Error saving assessment:', error);
+    }
   };
 
   const moveToNextQuestion = () => {
     // Reset celebration
     setShowCelebration(false);
-    emojiScale.setValue(0);
-    emojiOpacity.setValue(0);
+    setParticles([]);
 
     // Fade out current question
     Animated.parallel([
@@ -168,27 +311,34 @@ const QuestionScreen = ({ navigation }) => {
         fadeAnim.setValue(1);
         slideAnim.setValue(50);
       } else {
-        // All questions answered - navigate to results
-        navigation.navigate('Result', { answers, totalQuestions });
+        // All questions answered - play completion sound
+        playSound(totalQuestions);
+        
+        // Save assessment to history
+        saveAssessmentToHistory();
+        
+        // Navigate to results
+        setTimeout(() => {
+          navigation.navigate('ResultScreen', { 
+            answers, 
+            totalQuestions,
+            userProfile,
+          });
+        }, 1000);
       }
     });
   };
 
   const getCategoryColor = () => {
-    if (currentQuestionIndex < 3) return '#6366F1'; // Jolly - Blue
-    if (currentQuestionIndex < 6) return '#10B981'; // Health - Green
-    return '#EC4899'; // Mental Health - Pink
+    return CATEGORY_COLORS[currentQuestion.category] || '#6B7280';
   };
 
   const getCategoryName = () => {
-    if (currentQuestionIndex < 3) return 'Jolly Questions';
-    if (currentQuestionIndex < 6) return 'Health Questions';
-    return 'Mental Health Questions';
+    return CATEGORY_NAMES[currentQuestion.category] || 'Questions';
   };
 
-  const getRandomEmoji = () => {
-    const emojis = ['🎉', '⭐', '👍', '💪', '🌟', '✨', '🎊', '💯', '🔥'];
-    return emojis[Math.floor(Math.random() * emojis.length)];
+  const getCategoryIcon = () => {
+    return CATEGORY_ICONS[currentQuestion.category] || '📋';
   };
 
   const getRandomEncouragement = () => {
@@ -196,6 +346,17 @@ const QuestionScreen = ({ navigation }) => {
       Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)
     ];
   };
+
+  // const getSensitivityIndicator = () => {
+  //   if (hasSensitiveContent(currentQuestion)) {
+  //     return (
+  //       <View style={styles.sensitivityBadge}>
+  //         <Text style={styles.sensitivityText}>💚 Safe Space</Text>
+  //       </View>
+  //     );
+  //   }
+  //   return null;
+  // };
 
   return (
     <View style={styles.container}>
@@ -206,7 +367,7 @@ const QuestionScreen = ({ navigation }) => {
           onPress={() => {
             Alert.alert(
               'Exit Assessment',
-              'Are you sure you want to exit? Your progress will be lost.',
+              'Are you sure you want to exit? Your progress will be saved.',
               [
                 { text: 'Continue', style: 'cancel' },
                 {
@@ -222,10 +383,13 @@ const QuestionScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.categoryBadge}>
+          <Text style={styles.categoryIcon}>{getCategoryIcon()}</Text>
           <Text style={[styles.categoryText, { color: getCategoryColor() }]}>
             {getCategoryName()}
           </Text>
         </View>
+
+        <View style={styles.placeholder} />
       </View>
 
       {/* Progress Bar */}
@@ -246,6 +410,9 @@ const QuestionScreen = ({ navigation }) => {
         </Text>
       </View>
 
+      {/* Sensitivity Indicator */}
+      {/* {getSensitivityIndicator()} */}
+
       {/* Question Card */}
       <Animated.View
         style={[
@@ -256,80 +423,105 @@ const QuestionScreen = ({ navigation }) => {
           },
         ]}
       >
-        <View style={styles.questionCard}>
-          <Text style={styles.questionNumber}>Question {currentQuestionIndex + 1}</Text>
-          <Text style={styles.questionText}>{currentQuestion.text}</Text>
+        <View style={[styles.questionCard, hasSensitiveContent(currentQuestion) && styles.sensitiveCard]}>
+          <View style={styles.questionHeader}>
+            <Text style={[styles.questionNumber, { color: getCategoryColor() }]}>
+              Question {currentQuestionIndex + 1}
+            </Text>
+            {currentQuestion.required && (
+              <View style={styles.requiredBadge}>
+                <Text style={styles.requiredText}>Required</Text>
+              </View>
+            )}
+          </View>
+          
+          <Text style={styles.questionText}>
+            {getGentlePhrasing(currentQuestion.text)}
+          </Text>
 
           {/* Options */}
           <View style={styles.optionsContainer}>
             {currentQuestion.options.map((option, index) => (
               <TouchableOpacity
                 key={index}
-                style={styles.optionButton}
+                style={[
+                  styles.optionButton,
+                  { borderColor: getCategoryColor() + '30' }
+                ]}
                 onPress={() => handleAnswer(option, index)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.optionText}>{option}</Text>
+                <View style={[styles.optionIndicator, { backgroundColor: getCategoryColor() }]} />
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Helper text for sensitive questions */}
+          {hasSensitiveContent(currentQuestion) && (
+            <View style={styles.helperContainer}>
+              <Text style={styles.helperText}>
+                💚 Your responses are confidential and help us support you better
+              </Text>
+            </View>
+          )}
         </View>
       </Animated.View>
 
-      {/* Celebration Overlay */}
+      {/* User Profile Info */}
+      <View style={styles.profileInfo}>
+        <Text style={styles.profileInfoText}>
+          Personalized for: {userProfile.gender === GENDER_TYPES.MALE ? '👨' : userProfile.gender === GENDER_TYPES.FEMALE ? '👩' : '👤'} Age {userProfile.age}
+        </Text>
+      </View>
+
+      {/* GPay/Paytm Style Celebration Overlay */}
       {showCelebration && (
-        <View style={styles.celebrationOverlay}>
-          {/* Multiple Emojis Burst */}
-          {[...Array(8)].map((_, i) => (
-            <Animated.Text
-              key={i}
+        <View style={styles.celebrationOverlay} pointerEvents="none">
+          {/* Particle Burst - GPay Style */}
+          {particles.map((particle) => {
+            const rotateZ = particle.rotate.interpolate({
+              inputRange: [0, 360],
+              outputRange: ['0deg', '360deg'],
+            });
+
+            return (
+              <Animated.Text
+                key={particle.id}
+                style={[
+                  styles.particle,
+                  {
+                    opacity: particle.opacity,
+                    transform: [
+                      { translateX: particle.translateX },
+                      { translateY: particle.translateY },
+                      { scale: particle.scale },
+                      { rotate: rotateZ },
+                    ],
+                  },
+                ]}
+              >
+                {particle.emoji}
+              </Animated.Text>
+            );
+          })}
+
+          {/* Encouragement Message */}
+          {particles.length > 0 && (
+            <Animated.View
               style={[
-                styles.celebrationEmoji,
+                styles.encouragementContainer,
                 {
-                  opacity: emojiOpacity,
-                  transform: [
-                    { scale: emojiScale },
-                    {
-                      translateX: Math.cos((i * Math.PI) / 4) * 100,
-                    },
-                    {
-                      translateY: Math.sin((i * Math.PI) / 4) * 100,
-                    },
-                  ],
+                  opacity: particles[0]?.opacity || 1,
+                  transform: [{ scale: particles[0]?.scale || 1 }],
                 },
               ]}
             >
-              {getRandomEmoji()}
-            </Animated.Text>
-          ))}
-
-          {/* Thumbs Up Center */}
-          <Animated.Text
-            style={[
-              styles.thumbsUp,
-              {
-                opacity: emojiOpacity,
-                transform: [{ scale: emojiScale }],
-              },
-            ]}
-          >
-            👍
-          </Animated.Text>
-
-          {/* Encouragement Message */}
-          <Animated.View
-            style={[
-              styles.encouragementContainer,
-              {
-                opacity: emojiOpacity,
-                transform: [{ scale: emojiScale }],
-              },
-            ]}
-          >
-            <Text style={styles.encouragementText}>
-              {getRandomEncouragement()}
-            </Text>
-          </Animated.View>
+              <Text style={styles.encouragementText}>
+                {getRandomEncouragement()}
+              </Text>
+            </Animated.View>
+          )}
         </View>
       )}
     </View>
@@ -346,7 +538,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
   },
   backButton: {
@@ -369,15 +561,24 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  categoryIcon: {
+    fontSize: 20,
   },
   categoryText: {
     fontSize: 16,
     fontWeight: '600',
   },
+  placeholder: {
+    width: 40,
+  },
   progressContainer: {
     paddingHorizontal: 24,
-    marginBottom: 32,
+    marginBottom: 20,
   },
   progressBar: {
     height: 8,
@@ -394,6 +595,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
+    fontWeight: '500',
+  },
+  sensitivityBadge: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  sensitivityText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065F46',
   },
   questionContainer: {
     flex: 1,
@@ -409,18 +624,37 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
+  sensitiveCard: {
+    borderWidth: 2,
+    borderColor: '#D1FAE5',
+  },
+  questionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   questionNumber: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6366F1',
-    marginBottom: 12,
+  },
+  requiredBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  requiredText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#DC2626',
   },
   questionText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 32,
-    lineHeight: 32,
+    lineHeight: 30,
   },
   optionsContainer: {
     gap: 12,
@@ -428,15 +662,45 @@ const styles = StyleSheet.create({
   optionButton: {
     backgroundColor: '#F9FAFB',
     borderWidth: 2,
-    borderColor: '#E5E7EB',
     borderRadius: 16,
     padding: 20,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   optionText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
+    flex: 1,
+  },
+  optionIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 12,
+  },
+  helperContainer: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+  },
+  helperText: {
+    fontSize: 13,
+    color: '#065F46',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  profileInfo: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  profileInfoText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
   },
   celebrationOverlay: {
     position: 'absolute',
@@ -446,31 +710,28 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  celebrationEmoji: {
+  particle: {
     position: 'absolute',
     fontSize: 40,
-  },
-  thumbsUp: {
-    fontSize: 100,
-    marginBottom: 20,
+    top: height / 2,
+    left: width / 2,
   },
   encouragementContainer: {
     position: 'absolute',
-    bottom: 150,
+    top: height / 2 - 100,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   encouragementText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#6366F1',
     textAlign: 'center',

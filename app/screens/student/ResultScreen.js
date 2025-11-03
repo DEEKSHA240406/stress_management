@@ -1,318 +1,146 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
-  Animated,
   ScrollView,
-  Dimensions,
+  TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import moment from 'moment';
-
-const { width } = Dimensions.get('window');
-
-const COMPLETION_MESSAGES = [
-  "You did it! 🎊",
-  "Assessment completed successfully! ✨",
-  "Great work completing the assessment! 🌟",
-  "Thank you for taking the time! 💙",
-  "Well done! Your responses have been recorded! ✅",
-];
+import {
+  CATEGORY_COLORS,
+  CATEGORY_NAMES,
+  CATEGORY_ICONS,
+  QUESTION_CATEGORIES,
+} from '../../../constants/questionCategories';
 
 const ResultScreen = ({ navigation, route }) => {
-  const { answers, totalQuestions } = route.params;
-  
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.5)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const confettiAnims = useRef([...Array(20)].map(() => ({
-    x: new Animated.Value(0),
-    y: new Animated.Value(0),
-    opacity: new Animated.Value(1),
-  }))).current;
-
-  const [score, setScore] = useState(0);
-  const [analysis, setAnalysis] = useState('');
-  const [recommendation, setRecommendation] = useState('');
-  const [riskLevel, setRiskLevel] = useState('');
+  const { answers = [], totalQuestions = 0, userProfile } = route.params || {};
 
   useEffect(() => {
-    calculateResults();
-    startAnimations();
-    saveAssessment();
+    console.log('📊 Results loaded:', {
+      totalAnswers: answers.length,
+      totalQuestions,
+      userProfile,
+    });
   }, []);
 
-  const calculateResults = () => {
-    let calculatedScore = 0;
+  const getCategoryStats = () => {
+    const stats = {};
     
-    answers.forEach((answer) => {
-      if (answer.answer.includes('Great') || answer.answer.includes('Always') || answer.answer.includes('Excellent')) {
-        calculatedScore += 10;
-      } else if (answer.answer.includes('Good') || answer.answer.includes('Usually') || answer.answer.includes('7-8 hours')) {
-        calculatedScore += 8;
-      } else if (answer.answer.includes('Okay') || answer.answer.includes('Sometimes') || answer.answer.includes('Fair')) {
-        calculatedScore += 5;
-      } else if (answer.answer.includes('Rarely') || answer.answer.includes('5-6 hours')) {
-        calculatedScore += 3;
-      } else {
-        calculatedScore += 1;
+    // Initialize all categories
+    Object.values(QUESTION_CATEGORIES).forEach(category => {
+      stats[category] = {
+        answered: 0,
+        total: 0,
+      };
+    });
+
+    // Count answers by category
+    answers.forEach(answer => {
+      if (answer.category && stats[answer.category]) {
+        stats[answer.category].answered++;
       }
     });
 
-    const normalizedScore = Math.round((calculatedScore / (totalQuestions * 10)) * 100);
-    setScore(normalizedScore);
-
-    if (normalizedScore >= 80) {
-      setRiskLevel('Excellent');
-      setAnalysis('Your mental health appears to be in great shape! Keep up the good work with your self-care routines.');
-      setRecommendation('Continue your healthy habits and consider helping others on their wellness journey.');
-    } else if (normalizedScore >= 60) {
-      setRiskLevel('Good');
-      setAnalysis("You're doing well overall. There are some areas where you could improve to enhance your mental wellness.");
-      setRecommendation('Focus on maintaining good sleep habits, regular exercise, and stress management techniques.');
-    } else if (normalizedScore >= 40) {
-      setRiskLevel('Fair');
-      setAnalysis('Your responses indicate some areas of concern. Consider making some positive changes to support your mental health.');
-      setRecommendation('Try incorporating meditation, better sleep hygiene, and talking to someone you trust about your feelings.');
-    } else {
-      setRiskLevel('Needs Support');
-      setAnalysis('Your responses suggest you may benefit from additional support. Remember, seeking help is a sign of strength.');
-      setRecommendation('Please consider speaking with a mental health professional. Check out our resources or contact a crisis helpline if needed.');
-    }
+    return stats;
   };
 
-  const startAnimations = () => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 5,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
+  const categoryStats = getCategoryStats();
 
-    confettiAnims.forEach((anim, index) => {
-      const angle = (index / confettiAnims.length) * Math.PI * 2;
-      const distance = 150 + Math.random() * 100;
-      
-      Animated.parallel([
-        Animated.timing(anim.x, {
-          toValue: Math.cos(angle) * distance,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(anim.y, {
-          toValue: Math.sin(angle) * distance,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(anim.opacity, {
-          toValue: 0,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    });
-  };
-
-  const saveAssessment = async () => {
-    try {
-      const assessment = {
-        date: new Date().toISOString(),
-        score: score,
-        totalQuestions: totalQuestions,
-        answers: answers,
-        riskLevel: riskLevel,
-        duration: '8 min',
-        category: 'All',
-      };
-
-      const existingHistory = await AsyncStorage.getItem('@assessment_history');
-      const history = existingHistory ? JSON.parse(existingHistory) : [];
-      history.push(assessment);
-      await AsyncStorage.setItem('@assessment_history', JSON.stringify(history));
-    } catch (error) {
-      console.error('Error saving assessment:', error);
-    }
-  };
-
-  const getStatusColor = () => {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#F59E0B';
-    if (score >= 40) return '#F97316';
-    return '#EF4444';
-  };
-
-  const getStatusEmoji = () => {
-    if (score >= 80) return '😊';
-    if (score >= 60) return '🙂';
-    if (score >= 40) return '😐';
-    return '😟';
-  };
-
-  const getRandomCompletionMessage = () => {
-    return COMPLETION_MESSAGES[Math.floor(Math.random() * COMPLETION_MESSAGES.length)];
-  };
-
-  const handleGoHome = () => {
-    // Navigate back to Home tab in StudentTabs
-    navigation.navigate('StudentTabs', { screen: 'Home' });
+  const handleDone = () => {
+    navigation.navigate('StudentDashboard');
   };
 
   const handleViewHistory = () => {
-    navigation.navigate('StudentTabs', { screen: 'History' });
-  };
-
-  const handleViewResources = () => {
-    navigation.navigate('StudentTabs', { screen: 'Resources' });
+    navigation.navigate('History');
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.confettiContainer}>
-        {confettiAnims.map((anim, index) => (
-          <Animated.View
-            key={index}
-            style={[
-              styles.confetti,
-              {
-                opacity: anim.opacity,
-                transform: [
-                  { translateX: anim.x },
-                  { translateY: anim.y },
-                ],
-              },
-            ]}
-          >
-            <Text style={styles.confettiEmoji}>
-              {['🎉', '⭐', '✨', '🌟', '💫'][index % 5]}
-            </Text>
-          </Animated.View>
-        ))}
-      </View>
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Success Header */}
+        <View style={styles.header}>
+          <Text style={styles.successEmoji}>🎉</Text>
+          <Text style={styles.title}>Assessment Complete!</Text>
+          <Text style={styles.subtitle}>
+            Great job completing your mental wellness check-in
+          </Text>
+        </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [
-                { scale: scaleAnim },
-                { translateY: slideAnim },
-              ],
-            },
-          ]}
-        >
-          <View style={styles.header}>
-            <Text style={styles.completionIcon}>🎊</Text>
-            <Text style={styles.completionTitle}>Assessment Complete!</Text>
-            <Text style={styles.completionMessage}>
-              {getRandomCompletionMessage()}
+        {/* Summary Card */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Your Summary</Text>
+          
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Questions Answered</Text>
+            <Text style={styles.summaryValue}>{answers.length} / {totalQuestions}</Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Time Spent</Text>
+            <Text style={styles.summaryValue}>~{Math.ceil(answers.length * 0.5)} min</Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Completion Rate</Text>
+            <Text style={styles.summaryValue}>
+              {totalQuestions > 0 ? Math.round((answers.length / totalQuestions) * 100) : 0}%
             </Text>
           </View>
+        </View>
 
-          <View style={styles.scoreContainer}>
-            <View style={[styles.scoreCircle, { borderColor: getStatusColor() }]}>
-              <Text style={styles.scoreEmoji}>{getStatusEmoji()}</Text>
-              <Text style={[styles.scoreNumber, { color: getStatusColor() }]}>
-                {score}
-              </Text>
-              <Text style={styles.scoreLabel}>out of 100</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '20' }]}>
-              <Text style={[styles.statusText, { color: getStatusColor() }]}>
-                {riskLevel}
-              </Text>
-            </View>
-          </View>
+        {/* Category Breakdown */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Category Breakdown</Text>
+          
+          {Object.keys(categoryStats).map((categoryKey) => {
+            const stat = categoryStats[categoryKey];
+            const categoryName = CATEGORY_NAMES[categoryKey];
+            const categoryIcon = CATEGORY_ICONS[categoryKey];
+            const categoryColor = CATEGORY_COLORS[categoryKey];
 
-          <View style={styles.analysisCard}>
-            <Text style={styles.analysisTitle}>Your Assessment Summary 📋</Text>
-            <Text style={styles.analysisText}>{analysis}</Text>
-          </View>
+            if (stat.answered === 0) return null;
 
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{totalQuestions}</Text>
-              <Text style={styles.statLabel}>Questions</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>{moment().format('MMM DD')}</Text>
-              <Text style={styles.statLabel}>Date</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>8 min</Text>
-              <Text style={styles.statLabel}>Duration</Text>
-            </View>
-          </View>
+            return (
+              <View
+                key={categoryKey}
+                style={[styles.categoryCard, { borderLeftColor: categoryColor }]}
+              >
+                <View style={styles.categoryHeader}>
+                  <Text style={styles.categoryIcon}>{categoryIcon}</Text>
+                  <Text style={styles.categoryName}>{categoryName}</Text>
+                </View>
+                <Text style={styles.categoryCount}>
+                  {stat.answered} question{stat.answered !== 1 ? 's' : ''} answered
+                </Text>
+              </View>
+            );
+          })}
+        </View>
 
-          <View style={styles.recommendationCard}>
-            <Text style={styles.recommendationIcon}>💡</Text>
-            <View style={styles.recommendationContent}>
-              <Text style={styles.recommendationTitle}>Recommendations</Text>
-              <Text style={styles.recommendationText}>{recommendation}</Text>
-            </View>
-          </View>
+        {/* Insights */}
+        <View style={styles.insightsCard}>
+          <Text style={styles.insightsIcon}>💡</Text>
+          <Text style={styles.insightsTitle}>What's Next?</Text>
+          <Text style={styles.insightsText}>
+            Your responses help us understand your wellness better. Consider taking regular
+            assessments to track your progress over time.
+          </Text>
+        </View>
 
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity style={styles.primaryButton} onPress={handleGoHome}>
-              <Text style={styles.primaryButtonText}>Back to Dashboard</Text>
-            </TouchableOpacity>
+        {/* Action Buttons */}
+        <TouchableOpacity style={styles.primaryButton} onPress={handleDone}>
+          <Text style={styles.primaryButtonText}>Back to Dashboard</Text>
+        </TouchableOpacity>
 
-            <View style={styles.secondaryButtons}>
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleViewHistory}>
-                <Text style={styles.secondaryButtonIcon}>📈</Text>
-                <Text style={styles.secondaryButtonText}>View History</Text>
-              </TouchableOpacity>
+        {/* <TouchableOpacity style={styles.secondaryButton} onPress={handleViewHistory}>
+          <Text style={styles.secondaryButtonText}>View History</Text>
+        </TouchableOpacity> */}
 
-              <TouchableOpacity style={styles.secondaryButton} onPress={handleViewResources}>
-                <Text style={styles.secondaryButtonIcon}>📚</Text>
-                <Text style={styles.secondaryButtonText}>Resources</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {score < 40 && (
-            <View style={styles.emergencyCard}>
-              <Text style={styles.emergencyIcon}>🆘</Text>
-              <Text style={styles.emergencyTitle}>Need Immediate Help?</Text>
-              <Text style={styles.emergencyText}>
-                If you're in crisis, please reach out to a professional immediately
-              </Text>
-              <TouchableOpacity style={styles.emergencyButton}>
-                <Text style={styles.emergencyButtonText}>Crisis Helpline</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={styles.quoteCard}>
-            <Text style={styles.quoteIcon}>"</Text>
-            <Text style={styles.quoteText}>
-              Taking care of your mental health is an act of self-love. You're taking the right steps!
-            </Text>
-          </View>
-        </Animated.View>
+        <View style={styles.bottomSpacing} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -321,171 +149,130 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
-  confettiContainer: {
-    position: 'absolute',
-    top: 200,
-    left: width / 2,
-    zIndex: 10,
-  },
-  confetti: {
-    position: 'absolute',
-  },
-  confettiEmoji: {
-    fontSize: 24,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
-  },
-  content: {
     padding: 24,
-    paddingTop: 80,
   },
   header: {
     alignItems: 'center',
     marginBottom: 32,
+    marginTop: 20,
   },
-  completionIcon: {
+  successEmoji: {
     fontSize: 80,
     marginBottom: 16,
   },
-  completionTitle: {
+  title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 8,
+    textAlign: 'center',
   },
-  completionMessage: {
+  subtitle: {
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
-    paddingHorizontal: 20,
+    lineHeight: 22,
   },
-  scoreContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  scoreCircle: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    borderWidth: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  scoreEmoji: {
-    fontSize: 40,
-    marginBottom: 8,
-  },
-  scoreNumber: {
-    fontSize: 48,
-    fontWeight: 'bold',
-  },
-  scoreLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  statusText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  analysisCard: {
+  summaryCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
+    padding: 24,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
   },
-  analysisTitle: {
+  summaryTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 20,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  summaryLabel: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  summaryValue: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
-    marginBottom: 12,
   },
-  analysisText: {
-    fontSize: 15,
-    color: '#6B7280',
-    lineHeight: 22,
+  section: {
+    marginBottom: 24,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statNumber: {
+  sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#6366F1',
-    marginBottom: 4,
+    color: '#1F2937',
+    marginBottom: 16,
   },
-  statLabel: {
-    fontSize: 13,
-    color: '#6B7280',
+  categoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: 12,
-  },
-  recommendationCard: {
+  categoryHeader: {
     flexDirection: 'row',
-    backgroundColor: '#FFFBEB',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  categoryIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  categoryCount: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 36,
+  },
+  insightsCard: {
+    backgroundColor: '#EEF2FF',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    borderWidth: 2,
-    borderColor: '#FEF3C7',
+    alignItems: 'center',
   },
-  recommendationIcon: {
-    fontSize: 32,
-    marginRight: 12,
+  insightsIcon: {
+    fontSize: 48,
+    marginBottom: 12,
   },
-  recommendationContent: {
-    flex: 1,
-  },
-  recommendationTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#92400E',
+  insightsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4F46E5',
     marginBottom: 8,
   },
-  recommendationText: {
+  insightsText: {
     fontSize: 14,
-    color: '#B45309',
+    color: '#6366F1',
+    textAlign: 'center',
     lineHeight: 20,
-  },
-  actionsContainer: {
-    marginBottom: 24,
   },
   primaryButton: {
     backgroundColor: '#6366F1',
@@ -501,88 +288,24 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: '#FFFFFF',
-  },
-  secondaryButtons: {
-    flexDirection: 'row',
-    gap: 12,
   },
   secondaryButton: {
-    flex: 1,
-    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  secondaryButtonIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  emergencyCard: {
-    backgroundColor: '#FEF2F2',
-    borderRadius: 16,
-    padding: 24,
+    padding: 18,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FEE2E2',
-    marginBottom: 20,
+    borderColor: '#E5E7EB',
   },
-  emergencyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emergencyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#991B1B',
-    marginBottom: 8,
-  },
-  emergencyText: {
-    fontSize: 14,
-    color: '#B91C1C',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  emergencyButton: {
-    backgroundColor: '#EF4444',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  emergencyButtonText: {
-    fontSize: 14,
+  secondaryButtonText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  quoteCard: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 16,
-    padding: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#6366F1',
-  },
-  quoteIcon: {
-    fontSize: 48,
     color: '#6366F1',
-    opacity: 0.3,
-    lineHeight: 32,
   },
-  quoteText: {
-    fontSize: 15,
-    color: '#4F46E5',
-    fontStyle: 'italic',
-    lineHeight: 22,
+  bottomSpacing: {
+    height: 20,
   },
 });
 

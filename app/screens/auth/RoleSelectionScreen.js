@@ -1,314 +1,307 @@
+// app/screens/auth/RoleSelectionScreen.js
 import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  Animated,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
   Dimensions,
+  Animated,
+  Image,
 } from 'react-native';
-import { USER_ROLES } from '../../../constants';
+import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-const RoleSelectionScreen = ({ navigation }) => {
+const RoleSelectionScreen = () => {
+  const navigation = useNavigation();
   const [selectedRole, setSelectedRole] = useState(null);
-  const [scaleStudent] = useState(new Animated.Value(1));
-  const [scaleAdmin] = useState(new Animated.Value(1));
+  const [scaleAnim] = useState(new Animated.Value(1));
 
-  // Animation on press
-  const handlePressIn = (role) => {
-    const scale = role === USER_ROLES.STUDENT ? scaleStudent : scaleAdmin;
-    Animated.spring(scale, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
+  const roles = [
+    {
+      id: 'student',
+      title: 'Student',
+      description: 'Take assessments and track your mental health journey',
+      icon: 'school',
+      gradient: ['#6C63FF', '#5A52D5'],
+      iconBg: '#F0EFFF',
+      iconColor: '#6C63FF',
+    },
+    {
+      id: 'mentor',
+      title: 'Mentor',
+      description: 'Guide and support up to 20 students on their wellness path',
+      icon: 'account-heart',
+      gradient: ['#FF6B9D', '#E8578E'],
+      iconBg: '#FFF0F5',
+      iconColor: '#FF6B9D',
+    },
+    {
+      id: 'counselor',
+      title: 'Counselor',
+      description: 'Provide professional support to students in need',
+      icon: 'hand-heart',
+      gradient: ['#4ECDC4', '#44B8B0'],
+      iconBg: '#E8FFFE',
+      iconColor: '#4ECDC4',
+    },
+    {
+      id: 'admin',
+      title: 'Admin',
+      description: 'Manage system, view analytics, and oversee all operations',
+      icon: 'shield-account',
+      gradient: ['#FFA726', '#FB8C00'],
+      iconBg: '#FFF8E1',
+      iconColor: '#FFA726',
+    },
+  ];
 
-  const handlePressOut = (role) => {
-    const scale = role === USER_ROLES.STUDENT ? scaleStudent : scaleAdmin;
-    Animated.spring(scale, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleRoleSelect = (role) => {
-    setSelectedRole(role);
+  const handleRoleSelect = (roleId) => {
+    setSelectedRole(roleId);
     
-    // Navigate to register with pre-selected role after a short delay
+    // Scale animation
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Navigate after animation
     setTimeout(() => {
-      navigation.navigate('Register', { selectedRole: role });
-    }, 200);
+      navigation.navigate('Login', { role: roleId });
+    }, 300);
+  };
+
+  const RoleCard = ({ role }) => {
+    const isSelected = selectedRole === role.id;
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => handleRoleSelect(role.id)}
+        style={styles.roleCardWrapper}
+      >
+        <Animated.View
+          style={[
+            styles.roleCard,
+            isSelected && {
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={role.gradient}
+            style={styles.roleGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            {/* Icon Container */}
+            <View style={[styles.iconContainer, { backgroundColor: role.iconBg }]}>
+              <Icon name={role.icon} size={40} color={role.iconColor} />
+            </View>
+
+            {/* Role Info */}
+            <View style={styles.roleInfo}>
+              <Text style={styles.roleTitle}>{role.title}</Text>
+              <Text style={styles.roleDescription}>{role.description}</Text>
+            </View>
+
+            {/* Arrow Icon */}
+            <View style={styles.arrowContainer}>
+              <Icon name="chevron-right" size={24} color="#FFF" />
+            </View>
+
+            {/* Selection Indicator */}
+            {isSelected && (
+              <View style={styles.selectedIndicator}>
+                <Icon name="check-circle" size={24} color="#FFF" />
+              </View>
+            )}
+          </LinearGradient>
+        </Animated.View>
+      </TouchableOpacity>
+    );
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>Welcome! 👋</Text>
-        <Text style={styles.title}>Who are you?</Text>
-        <Text style={styles.subtitle}>
-          Choose your role to get started on your mental wellness journey
-        </Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
 
-      {/* Role Cards */}
-      <View style={styles.rolesContainer}>
-        {/* Student Card */}
-        <Animated.View
-          style={[
-            styles.roleCardWrapper,
-            { transform: [{ scale: scaleStudent }] },
-          ]}
-        >
-          <TouchableOpacity
-            style={[
-              styles.roleCard,
-              styles.studentCard,
-              selectedRole === USER_ROLES.STUDENT && styles.roleCardSelected,
-            ]}
-            onPress={() => handleRoleSelect(USER_ROLES.STUDENT)}
-            onPressIn={() => handlePressIn(USER_ROLES.STUDENT)}
-            onPressOut={() => handlePressOut(USER_ROLES.STUDENT)}
-            activeOpacity={0.9}
-          >
-            <View style={styles.iconContainer}>
-              <Text style={styles.roleIcon}>🎓</Text>
-            </View>
-            
-            <Text style={styles.roleTitle}>Student</Text>
-            <Text style={styles.roleDescription}>
-              Take assessments, track your mental health, and access resources
+      <View style={styles.content}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <LinearGradient
+              colors={['#6C63FF', '#5A52D5']}
+              style={styles.logoGradient}
+            >
+              <Icon name="brain" size={40} color="#FFF" />
+            </LinearGradient>
+          </View>
+          
+          <Text style={styles.title}>Choose Your Role</Text>
+          <Text style={styles.subtitle}>
+            Select how you'd like to use the Mental Health & Stress Management platform
+          </Text>
+        </View>
+
+        {/* Roles List */}
+        <View style={styles.rolesContainer}>
+          {roles.map((role) => (
+            <RoleCard key={role.id} role={role} />
+          ))}
+        </View>
+
+        {/* Footer Info */}
+        <View style={styles.footer}>
+          <View style={styles.infoBox}>
+            <Icon name="information-outline" size={20} color="#6C63FF" />
+            <Text style={styles.infoText}>
+              Your role determines your access level and features available to you
             </Text>
-
-            <View style={styles.featuresContainer}>
-              <View style={styles.feature}>
-                <Text style={styles.featureIcon}>✓</Text>
-                <Text style={styles.featureText}>Mental health assessments</Text>
-              </View>
-              <View style={styles.feature}>
-                <Text style={styles.featureIcon}>✓</Text>
-                <Text style={styles.featureText}>Progress tracking</Text>
-              </View>
-              <View style={styles.feature}>
-                <Text style={styles.featureIcon}>✓</Text>
-                <Text style={styles.featureText}>Wellness resources</Text>
-              </View>
-            </View>
-
-            <View style={styles.buttonContainer}>
-              <Text style={styles.buttonText}>Continue as Student</Text>
-              <Text style={styles.arrow}>→</Text>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Admin Card */}
-        <Animated.View
-          style={[
-            styles.roleCardWrapper,
-            { transform: [{ scale: scaleAdmin }] },
-          ]}
-        >
-          <TouchableOpacity
-            style={[
-              styles.roleCard,
-              styles.adminCard,
-              selectedRole === USER_ROLES.ADMIN && styles.roleCardSelected,
-            ]}
-            onPress={() => handleRoleSelect(USER_ROLES.ADMIN)}
-            onPressIn={() => handlePressIn(USER_ROLES.ADMIN)}
-            onPressOut={() => handlePressOut(USER_ROLES.ADMIN)}
-            activeOpacity={0.9}
-          >
-            <View style={styles.iconContainer}>
-              <Text style={styles.roleIcon}>👨‍💼</Text>
-            </View>
-            
-            <Text style={styles.roleTitle}>Admin</Text>
-            <Text style={styles.roleDescription}>
-              Monitor student wellness, view analytics, and generate reports
-            </Text>
-
-            <View style={styles.featuresContainer}>
-              <View style={styles.feature}>
-                <Text style={styles.featureIcon}>✓</Text>
-                <Text style={styles.featureText}>Student analytics</Text>
-              </View>
-              <View style={styles.feature}>
-                <Text style={styles.featureIcon}>✓</Text>
-                <Text style={styles.featureText}>Data visualization</Text>
-              </View>
-              <View style={styles.feature}>
-                <Text style={styles.featureIcon}>✓</Text>
-                <Text style={styles.featureText}>Report generation</Text>
-              </View>
-            </View>
-
-            <View style={styles.buttonContainer}>
-              <Text style={styles.buttonText}>Continue as Admin</Text>
-              <Text style={styles.arrow}>→</Text>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
+          </View>
+        </View>
       </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.footerLink}>Sign In</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-    paddingTop: 60,
-    paddingHorizontal: 24,
+    backgroundColor: '#F5F7FA',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    paddingTop: 30,
+    paddingBottom: 20,
   },
-  welcomeText: {
-    fontSize: 24,
-    marginBottom: 8,
+  logoContainer: {
+    marginBottom: 20,
+  },
+  logoGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#6C63FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 12,
+    color: '#2C3E50',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: 14,
+    color: '#7F8C8D',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 20,
     paddingHorizontal: 20,
   },
   rolesContainer: {
     flex: 1,
-    justifyContent: 'center',
-    gap: 20,
+    paddingTop: 10,
   },
   roleCardWrapper: {
-    width: '100%',
-  },
-  roleCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 3,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  studentCard: {
-    borderColor: '#6366F1',
-  },
-  adminCard: {
-    borderColor: '#EC4899',
-  },
-  roleCardSelected: {
-    borderWidth: 4,
-    shadowOpacity: 0.2,
-    elevation: 8,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
     marginBottom: 16,
   },
-  roleIcon: {
-    fontSize: 48,
+  roleCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
+  roleGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    minHeight: 100,
+    position: 'relative',
+  },
+  iconContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  roleInfo: {
+    flex: 1,
+    paddingRight: 10,
   },
   roleTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
-    textAlign: 'center',
-    marginBottom: 8,
+    color: '#FFF',
+    marginBottom: 6,
   },
   roleDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
+    fontSize: 13,
+    color: '#FFF',
+    opacity: 0.9,
+    lineHeight: 18,
   },
-  featuresContainer: {
-    marginBottom: 20,
-  },
-  feature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  featureIcon: {
-    fontSize: 16,
-    color: '#10B981',
-    marginRight: 8,
-    fontWeight: 'bold',
-  },
-  featureText: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  arrowContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    marginTop: 8,
+    alignItems: 'center',
   },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginRight: 8,
-  },
-  arrow: {
-    fontSize: 18,
-    color: '#1F2937',
+  selectedIndicator: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 15,
+    padding: 2,
   },
   footer: {
+    paddingVertical: 20,
+  },
+  infoBox: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 40,
+    backgroundColor: '#F0EFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#6C63FF',
   },
-  footerText: {
-    color: '#6B7280',
-    fontSize: 14,
-  },
-  footerLink: {
-    color: '#6366F1',
-    fontSize: 14,
-    fontWeight: '700',
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#5D6D7E',
+    marginLeft: 12,
+    lineHeight: 18,
   },
 });
 
-export default RoleSelectionScreen
+export default RoleSelectionScreen;

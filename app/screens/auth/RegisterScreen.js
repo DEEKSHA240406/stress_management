@@ -183,9 +183,7 @@ const RegisterScreen = ({ navigation, route }) => {
             <Text style={styles.subtitle}>
               Join us on your mental wellness journey
             </Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>✨ Using Mock Data (No Backend Needed)</Text>
-            </View>
+            
           </View>
 
           {/* Form */}
@@ -384,13 +382,6 @@ const RegisterScreen = ({ navigation, route }) => {
               )}
             </TouchableOpacity>
 
-            {/* Info Box */}
-            <View style={styles.infoBox}>
-              <Text style={styles.infoTitle}>💡 Note:</Text>
-              <Text style={styles.infoText}>
-                Your account will be created locally. No backend server required!
-              </Text>
-            </View>
 
             {/* Divider */}
             <View style={styles.divider}>
@@ -411,13 +402,7 @@ const RegisterScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              🚀 This app uses mock authentication{'\n'}
-              Data is stored locally on your device
-            </Text>
-          </View>
+         
 
           {/* Extra spacing */}
           <View style={styles.bottomSpacing} />
