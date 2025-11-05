@@ -12,12 +12,12 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 @auth_bp.route('/register', methods=['POST'])
 def register():
     """Register a new user"""
-    return AuthController.register(request.get_json())
+    return AuthController.register()
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """Login user"""
-    return AuthController.login(request.get_json())
+    return AuthController.login()
 
 @auth_bp.route('/verify', methods=['GET'])
 @jwt_required()
