@@ -1,15 +1,11 @@
-"""
-Flask Application - Mental Wellness API
-"""
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from datetime import timedelta
 import os
 import sys
 from datetime import datetime
 
-# Add the backend directory to Python path
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import configurations and modules
@@ -44,9 +40,14 @@ def create_app(config_name=None):
     def log_request():
         """Log incoming requests"""
         if request.method in ['POST', 'PUT', 'PATCH']:
+            body = request.get_json(silent=True)
+            headers = {
+                'content-type': request.headers.get('Content-Type'),
+                'authorization': 'Bearer ***' if request.headers.get('Authorization') else 'none'
+            }
             print(f"\n📥 {request.method} {request.path}")
-            print(f"   Body: {request.get_json()}")
-            print(f"   Headers: {dict(request.headers)}")
+            print(f"   Body: {body}")
+            print(f"   Headers: {headers}")
     
     # ========== ROUTES ==========
     
@@ -225,9 +226,9 @@ app = create_app()
 
 if __name__ == '__main__':
     # Print startup information
-    print('\n' + '='.repeat(60))
+    print('\n' + '=' * 60)
     print('🚀 MENTAL WELLNESS API SERVER (FLASK)')
-    print('='.repeat(60))
+    print('=' * 60)
     print(f'📡 Server Status: Starting')
     print(f'🌍 Environment: {app.config.get("FLASK_ENV", "development")}')
     print(f'📍 Port: {app.config["PORT"]}')
@@ -244,7 +245,7 @@ if __name__ == '__main__':
     print('\n👤 Test Users:')
     print('   Student: student@test.com / password123')
     print('   Admin:   admin@test.com / admin123')
-    print('='.repeat(60) + '\n')
+    print('=' * 60 + '\n')
     
     # Run the app
     app.run(
