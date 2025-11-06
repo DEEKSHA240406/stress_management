@@ -10,11 +10,13 @@ import re
 class User:
     """User model for MongoDB"""
     
-    def __init__(self, name=None, email=None, password=None, role='student'):
+    def __init__(self, name=None, email=None, password=None, role='student', mentor_id=None, mentor_name=None):
         self.name = name
         self.email = email
         self.password = password
         self.role = role
+        self.mentor_id = ObjectId(mentor_id) if mentor_id else None
+        self.mentor_name = mentor_name
         self.created_at = datetime.utcnow()
         self.updated_at = datetime.utcnow()
     
@@ -78,6 +80,8 @@ class User:
                 'email': self.email.lower().strip(),
                 'password': self.password,
                 'role': self.role,
+                'mentor_id': self.mentor_id,
+                'mentor_name': self.mentor_name,
                 'created_at': self.created_at,
                 'updated_at': self.updated_at
             }
@@ -185,6 +189,8 @@ class User:
                     'email': 'student@test.com',
                     'password': User.hash_password('password123'),
                     'role': 'student',
+                    'mentor_id': None,
+                    'mentor_name': None,
                     'created_at': datetime.utcnow(),
                     'updated_at': datetime.utcnow()
                 },
@@ -193,6 +199,28 @@ class User:
                     'email': 'admin@test.com',
                     'password': User.hash_password('admin123'),
                     'role': 'admin',
+                    'mentor_id': None,
+                    'mentor_name': None,
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow()
+                },
+                {
+                    'name': 'Test Mentor',
+                    'email': 'mentor@test.com',
+                    'password': User.hash_password('mentor123'),
+                    'role': 'mentor',
+                    'mentor_id': None,
+                    'mentor_name': None,
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow()
+                },
+                {
+                    'name': 'Test Counselor',
+                    'email': 'counselor@test.com',
+                    'password': User.hash_password('counselor123'),
+                    'role': 'counselor',
+                    'mentor_id': None,
+                    'mentor_name': None,
                     'created_at': datetime.utcnow(),
                     'updated_at': datetime.utcnow()
                 }
@@ -201,6 +229,8 @@ class User:
             # Check if test users already exist
             existing_student = User.find_by_email('student@test.com')
             existing_admin = User.find_by_email('admin@test.com')
+            existing_mentor = User.find_by_email('mentor@test.com')
+            existing_counselor = User.find_by_email('counselor@test.com')
             
             if not existing_student:
                 User.get_collection().insert_one(test_users[0])
@@ -209,6 +239,14 @@ class User:
             if not existing_admin:
                 User.get_collection().insert_one(test_users[1])
                 print("✅ Test admin user created: admin@test.com / admin123")
+            
+            if not existing_mentor:
+                User.get_collection().insert_one(test_users[2])
+                print("✅ Test mentor user created: mentor@test.com / mentor123")
+            
+            if not existing_counselor:
+                User.get_collection().insert_one(test_users[3])
+                print("✅ Test counselor user created: counselor@test.com / counselor123")
                 
         except Exception as e:
             print(f"Error creating test users: {e}")
@@ -219,6 +257,32 @@ class User:
             'name': self.name,
             'email': self.email,
             'role': self.role,
+            'mentor_id': str(self.mentor_id) if self.mentor_id else None,
+            'mentor_name': self.mentor_name,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
+    @staticmethod
+    def is_valid_role(role):
+        return role in ['student', 'admin', 'mentor', 'counselor']
+
+    @staticmethod
+    def set_student_mentor(student_id, mentor_id):
+        try:
+            sid = ObjectId(student_id) if isinstance(student_id, str) else student_id
+            mid = ObjectId(mentor_id) if isinstance(mentor_id, str) else mentor_id
+            mentor = User.get_collection().find_one({'_id': mid, 'role': 'mentor'})
+            if not mentor:
+                return False, 'Mentor not found'
+            result = User.get_collection().update_one(
+                {'_id': sid, 'role': 'student'},
+                {'$set': {
+                    'mentor_id': mid,
+                    'mentor_name': mentor.get('name'),
+                    'updated_at': datetime.utcnow()
+                }}
+            )
+            return result.modified_count > 0, None
+        except Exception as e:
+            return False, str(e)

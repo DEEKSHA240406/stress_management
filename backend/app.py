@@ -13,6 +13,8 @@ from config.config import config
 from config.db import db
 from models.User import User
 from routes.authRoutes import auth_bp
+from routes.studentRoutes import student_bp
+from routes.testRoutes import test_bp
 
 def create_app(config_name=None):
     """Create and configure Flask application"""
@@ -33,12 +35,13 @@ def create_app(config_name=None):
     
     # Register blueprints
     app.register_blueprint(auth_bp)
+    app.register_blueprint(student_bp)
+    app.register_blueprint(test_bp)
     
     # ========== MIDDLEWARE ==========
     
     @app.before_request
     def log_request():
-        """Log incoming requests"""
         if request.method in ['POST', 'PUT', 'PATCH']:
             body = request.get_json(silent=True)
             headers = {
@@ -80,7 +83,7 @@ def create_app(config_name=None):
         """Health check endpoint"""
         try:
             # Test database connection
-            db.get_db().admin.command('ping')
+            db.get_db().command('ping')
             db_status = 'connected'
         except Exception as e:
             db_status = f'error: {str(e)}'

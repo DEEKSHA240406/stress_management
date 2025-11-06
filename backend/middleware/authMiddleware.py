@@ -120,6 +120,64 @@ def student_required(f):
     
     return decorated
 
+def mentor_required(f):
+    """Decorator to require mentor role for protected routes"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+            current_user_id = get_jwt_identity()
+            user = User.find_by_id(current_user_id)
+            if not user:
+                return jsonify({'success': False, 'message': 'User not found'}), 404
+            if user.get('role') != 'mentor':
+                return jsonify({'success': False, 'message': 'Mentor access required'}), 403
+            kwargs['current_user'] = user
+            return f(*args, **kwargs)
+        except Exception:
+            return jsonify({'success': False, 'message': 'Token is invalid or expired'}), 401
+    return decorated
+
+def counselor_required(f):
+    """Decorator to require counselor role for protected routes"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        try:
+            verify_jwt_in_request()
+            current_user_id = get_jwt_identity()
+            user = User.find_by_id(current_user_id)
+            if not user:
+                return jsonify({'success': False, 'message': 'User not found'}), 404
+            if user.get('role') != 'counselor':
+                return jsonify({'success': False, 'message': 'Counselor access required'}), 403
+            kwargs['current_user'] = user
+            return f(*args, **kwargs)
+        except Exception:
+            return jsonify({'success': False, 'message': 'Token is invalid or expired'}), 401
+    return decorated
+
+def roles_required(allowed_roles):
+    """Decorator factory to allow any of the specified roles.
+    Usage: @roles_required(['admin','mentor'])
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            try:
+                verify_jwt_in_request()
+                current_user_id = get_jwt_identity()
+                user = User.find_by_id(current_user_id)
+                if not user:
+                    return jsonify({'success': False, 'message': 'User not found'}), 404
+                if user.get('role') not in allowed_roles:
+                    return jsonify({'success': False, 'message': 'Insufficient role'}), 403
+                kwargs['current_user'] = user
+                return f(*args, **kwargs)
+            except Exception:
+                return jsonify({'success': False, 'message': 'Token is invalid or expired'}), 401
+        return decorated
+    return decorator
+
 def get_current_user():
     """Get current user from JWT token"""
     try:

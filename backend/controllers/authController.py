@@ -51,8 +51,12 @@ class AuthController:
                     'message': 'Email already registered. Please use a different email or login.'
                 }), 409
             
-            # Create new user
-            new_user = User(name=name, email=email, password=password, role=role)
+            # Validate role (default to student if invalid)
+            if not User.is_valid_role(role):
+                role = 'student'
+
+            # Create new user (mentor is chosen later by student)
+            new_user = User(name=name, email=email, password=password, role=role, mentor_id=None, mentor_name=None)
             user_data = new_user.save()
             
             # Generate JWT token
@@ -64,6 +68,8 @@ class AuthController:
                 'name': user_data['name'],
                 'email': user_data['email'],
                 'role': user_data['role'],
+                'mentor_id': user_data.get('mentor_id') and str(user_data.get('mentor_id')),
+                'mentor_name': user_data.get('mentor_name'),
                 'created_at': user_data['created_at'].isoformat()
             }
             
@@ -278,12 +284,22 @@ class AuthController:
         try:
             users = User.get_all_users()
             
-            # Convert ObjectId to string for JSON serialization
+            # Convert fields for JSON serialization safely
+            from datetime import datetime
             for user in users:
-                user['id'] = str(user['_id'])
-                del user['_id']
-                user['created_at'] = user['created_at'].isoformat()
-                user['updated_at'] = user['updated_at'].isoformat()
+                if user.get('_id'):
+                    user['id'] = str(user['_id'])
+                    del user['_id']
+                # Optional role-related fields
+                if user.get('mentor_id'):
+                    try:
+                        user['mentor_id'] = str(user['mentor_id'])
+                    except Exception:
+                        pass
+                # Datetime fields may be missing or already strings
+                for ts_field in ['created_at', 'updated_at', 'started_at', 'completed_at']:
+                    if ts_field in user and isinstance(user[ts_field], datetime):
+                        user[ts_field] = user[ts_field].isoformat()
             
             return jsonify({
                 'success': True,
